@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="style.css">
+  <title>SEKH BHANDAR</title>
+  <style>
+    .translate-wrapper {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 15px;
+    }
+    .translate-btn {
+      background: #00bfff;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 191, 255, 0.3);
+      transition: background 0.3s ease;
+    }
+    .translate-btn:hover {
+      background: #008ecc;
+    }
+
+    .nav-btn-bar {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .btn-back {
+      background: #7f8c8d;
+      color: white;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-next {
+      background: #2ecc71;
+      color: white;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-cancel {
+      background: #e74c3c;
+      color: white;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="side-bar"> 
+    <h1 class="logo1">SEKH BHANDAR</h1>
+    <ul>
+      <li><a href="#dashboard" class="nav-link">DASHBOARD</a></li>
+      <li><a href="#party" class="nav-link">PARTY</a></li>
+      <li><a href="#storages" class="nav-link">STORAGES</a></li>
+      <li><a href="#bills" class="nav-link">INVOICE BILLS</a></li>
+      <li><a href="#api" class="nav-link">API</a></li>
+    </ul>
+  </div>
+       
+  <div class="main-content">
+      
+    <!-- DASHBOARD SECTION -->
+    <div id="dashboard" class="content">
+      <div class="card">
+        <h3>Total Party</h3>
+        <p id="partyCount">0</p>
+      </div>
+      <div class="card">
+        <h3>Total Storage</h3>
+        <p id="storageCount">0</p>
+      </div>
+      <div class="card">
+        <h3>Total Bills</h3>
+        <p id="billCount">0</p>
+      </div>
+
+      <div class="session-box">
+        <span>📱 Mobile Connect Session ID: </span>
+        <strong id="displaySessionId">Loading...</strong>
+      </div>
+    </div>
+    
+    <!-- PARTY SECTION -->
+    <div id="party" class="content">
+      <h1 class="logo">SEKH BHANDAR</h1>
+      <h5>Party Information</h5>
+      
+      <label>Type Party Name</label><br>
+      <input type="text" class="text capitalize" placeholder="Party Name" required><br>
+      
+      <label>Type Party Address</label><br>
+      <input type="text" class="text capitalize" placeholder="Party Address"><br>
+      
+      <label>Type Party Ph.NO</label><br>
+      <input type="number" placeholder="Party Ph. NO."><br>
+      
+      <button type="button" class="save">SAVE</button>
+      <button type="button" class="cancel">CANCEL</button>
+      
+      <hr>
+      <input id="searchParty" placeholder="Search Party...">
+
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Address</th>
+            <th>Phone</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="partyList"></tbody>
+      </table>
+    </div>
+                    
+    <!-- STORAGES SECTION -->
+    <div id="storages" class="content">
+      <h1 class="logo">SEKH BHANDAR</h1>
+      <h5>Storage Information</h5> 
+          
+      <label>Product Name</label><br>
+      <div class="suggestion-wrapper">
+          <input type="text" id="storageProdName" class="capitalize" placeholder="Product name" autocomplete="off">
+          <div id="storageDropdown" class="custom-dropdown-menu"></div>
+      </div>
+
+      <label>Barcode Code (Max 13 Digits)</label><br>
+      <input type="tel" id="storageBarcode" placeholder="Enter 13 Digit Barcode" maxlength="13" pattern="[0-9]*" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 13);"><br>
+          
+      <label>RATE</label><br>
+      <input type="number" id="storageRate" placeholder="rate" min="0" step="any"><br>
+          
+      <label>MRP</label><br>
+      <input type="number" id="storageMrp" placeholder="MRP" min="0" step="any"><br>
+          
+      <label>QTY UNIT</label><br>
+      <select class="styled-select" id="storageUnit">
+        <option value="Kg">Kg</option>
+        <option value="L">L</option>
+        <option value="Jar">Jar</option>
+        <option value="Dozon">Dozon</option>
+        <option value="Board">Board</option>
+        <option value="Pkt">Pkt</option>
+        <option value="Tin">Tin</option>
+        <option value="Pouse">Pouse</option>
+        <option value="Bag">Bag</option>
+        <option value="Box">Box</option>
+        <option value="Cart">Cart</option>
+        <option value="Pcs">Pcs</option>
+        <option value="Bundle">Bundle</option>
+        <option value="Chain">Chain</option>
+      </select> <br><br>
+    
+      <button type="button" class="save">SAVE</button>
+      <button type="button" class="cancel">CANCEL</button>
+      
+      <hr>
+      <input id="searchStorage" placeholder="Search Product or Barcode...">
+
+      <table>
+        <thead>
+          <tr>
+            <th>Name / Barcode</th>
+            <th>MRP</th>
+            <th>RATE</th>
+            <th>QTY UNIT</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- INVOICE BILLS SECTION -->
+    <div id="bills" class="content">
+      <h1 class="logo">SEKH BHANDAR</h1>
+      
+      <div class="translate-wrapper no-print">
+        <button type="button" id="langToggleBtn" class="translate-btn" onclick="toggleLanguage()">Translate: EN</button>
+      </div>
+
+      <!-- Input Form Section -->
+      <div id="input-section">
+        <h3>Party Information</h3>
+        <input type="text" id="partyName" class="capitalize" placeholder="Party Name">
+        <input type="text" id="partyAddress" class="capitalize" placeholder="Address">
+        <input type="number" id="partyPhone" placeholder="Phone">
+        
+        <h3>Product Information</h3>
+
+        <label for="prodBarcode">Barcode Code (Max 13 Digits)</label>
+        <input type="tel" 
+               id="prodBarcode" 
+               placeholder="Scan or Type 13 Digit Barcode" 
+               maxlength="13" 
+               pattern="[0-9]*" 
+               inputmode="numeric" 
+               autocomplete="off"
+               autofocus
+               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 13);">
+      
+        <label>Product Name</label>
+        <div class="suggestion-wrapper">
+            <input type="text" id="prodName" class="capitalize" placeholder="Product Name" autocomplete="off">
+            <div id="customProdDropdown" class="custom-dropdown-menu"></div>
+        </div>
+
+        <label>RATE</label>
+        <input type="number" id="prodRate" placeholder="Rate" min="0" step="any">
+        <label>MRP</label>
+        <input type="number" id="prodMrp" placeholder="Mrp" min="0" step="any">
+        <label>QTY</label>
+        <input type="number" id="prodQty" value="1" placeholder="Qty" min="0.001" step="any">
+
+        <label>Unit</label><br>
+        <select class="styled-select" id="billUnit">
+          <option value="Kg">Kg</option>
+          <option value="L">L</option>
+          <option value="Jar">Jar</option>
+          <option value="Dozon">Dozon</option>
+          <option value="Board">Board</option>
+          <option value="Pkt">Pkt</option>
+          <option value="Tin">Tin</option>
+          <option value="Pouse">Pouse</option>
+          <option value="Bag">Bag</option>
+          <option value="Box">Box</option>
+          <option value="Cart">Cart</option>
+          <option value="Pcs">Pcs</option>
+          <option value="Bundle">Bundle</option>
+          <option value="Chain">Chain</option>
+        </select> <br><br>
+        
+        <button type="button" class="save" onclick="addToPreview(false)">Add Product</button>
+        <button type="button" onclick="goToPreviewDirectly()" style="background: #2ecc71; color: white; padding: 12px 22px; border: none; cursor: pointer; border-radius: 8px; font-weight: bold;">View Preview Page →</button>
+        <button type="button" class="cancel" onclick="clearCurrentBill()">Cancel Bill</button>
+      </div>
+
+      <!-- Preview Section -->
+      <div id="preview-section" style="display:none;">
+        <h3>Bill Preview</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Product / Barcode</th>
+              <th>MRP</th>
+              <th>Rate</th>
+              <th>Qty</th>
+              <th>Total</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="previewTableBody"></tbody>
+        </table>
+        <br>
+        <div class="nav-btn-bar no-print">
+          <button type="button" class="btn-back" onclick="goBackToInput()">← Back (Add More)</button>
+          <button type="button" class="btn-next" onclick="showFinalBill()">Next (Create Final Bill) →</button>
+          <button type="button" class="btn-cancel" onclick="clearCurrentBill()">Cancel Bill</button>
+        </div>
+      </div>
+
+      <!-- Final Bill Section -->
+      <div id="final-bill-section" style="display:none;">
+        <h3 class="no-print">Final Bill</h3>
+        <div id="finalBillContentContainer"></div>
+        <br>
+      </div>
+
+      <!-- History Table Section -->
+      <div id="historyTableContainer" style="margin-top: 30px;" class="no-print">
+        <hr>
+        <h3>Bills History</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Party Name</th>
+              <th>Total Amount</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="billsHistoryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- API MAPPING SECTION -->
+    <div id="api" class="content">
+      <h1 class="logo">SEKH BHANDAR</h1>
+      <h5>Product Language Mapping (API)</h5>
+      <input type="text" id="apiBanglaSearch" placeholder="Search Bangla Name Only...">
+
+      <button type="button" onclick="autoTranslateAllStorageProducts(this)" style="background: #00bfff; margin-top: 10px;">Auto Translate All Products</button>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Product Name (English)</th>
+            <th>Bangla Name</th>
+          </tr>
+        </thead>
+        <tbody id="apiProductList">
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
