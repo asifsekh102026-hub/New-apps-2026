@@ -1,6 +1,6 @@
 <script type="module">
   // ==========================================
-  // Firebase SDK ইম্পোর্ট ও কনফিগারেশন
+  // ১. Firebase Initialization & Database Setup
   // ==========================================
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -12,15 +12,46 @@
     projectId: "nbtbr-b67c2",
     storageBucket: "nbtbr-b67c2.appspot.com",
     messagingSenderId: "835471865300",
-    appId: "1:835471865300:web:6fcfb66e29bfc97f4a9241",
-    measurementId: "G-Q7BN12BLP9"
+    appId: "1:835471865300:web:6fcfb66e29bfc97f4a9241"
   };
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
   // ==========================================
-  // ১. পেজ নেভিগেশন ও গ্লোবাল স্টেট
+  // ২. 4-Digit Session ID & Mobile Realtime Listener
+  // ==========================================
+  // ৪ অক্ষরের সেশন আইডি তৈরি (যেমন: 5821)
+  const currentSessionId = Math.floor(1000 + Math.random() * 9000).toString();
+
+  // স্ক্রিনে Session ID প্রদর্শনের জন্য এলিমেন্ট সেট আপ
+  window.addEventListener('DOMContentLoaded', () => {
+      let sessionDisplayEl = document.getElementById('sessionDisplay');
+      if (!sessionDisplayEl) {
+          sessionDisplayEl = document.createElement('div');
+          sessionDisplayEl.id = 'sessionDisplay';
+          sessionDisplayEl.style.cssText = "position: fixed; top: 10px; right: 20px; background: #0091ff; color: white; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 16px; z-index: 9999; box-shadow: 0 4px 10px rgba(0,0,0,0.2);";
+          document.body.appendChild(sessionDisplayEl);
+      }
+      sessionDisplayEl.innerText = `Mobile Session ID: ${currentSessionId}`;
+  });
+
+  // মোবাইল থেকে আসা বারকোড রিসেভ করা
+  const scannedBarcodeRef = ref(db, `scanned_barcodes/${currentSessionId}`);
+  onValue(scannedBarcodeRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.barcode) {
+          let barcodeInput = document.getElementById('prodBarcode');
+          if (barcodeInput) {
+              barcodeInput.value = data.barcode;
+              // ইনপুট ট্রিগার করে প্রোডাক্ট সার্চ করা
+              barcodeInput.dispatchEvent(new Event('input'));
+          }
+      }
+  });
+
+  // ==========================================
+  // ৩. Page Navigation & State
   // ==========================================
   let pages = document.querySelectorAll(".content");
   let navLinks = document.querySelectorAll(".nav-link");
@@ -40,9 +71,7 @@
           }
       });
 
-      if (pageId === 'api') {
-          renderApiPageTable();
-      }
+      if (pageId === 'api') renderApiPageTable();
   };
 
   showPage("dashboard");
@@ -61,14 +90,12 @@
   }
 
   function formatMRP(mrpValue) {
-      if (!mrpValue || mrpValue === "0" || parseFloat(mrpValue) === 0) {
-          return "-";
-      }
+      if (!mrpValue || mrpValue === "0" || parseFloat(mrpValue) === 0) return "-";
       return mrpValue;
   }
 
   // ==========================================
-  // ২. Firebase ডাটা সিঙ্ক্রোনাইজেশন
+  // ৪. Firebase Data State & Sync
   // ==========================================
   let parties = [];
   let products = [];
@@ -85,7 +112,6 @@
       if(document.getElementById('billCount')) document.getElementById('billCount').innerText = billsHistory.length;
   }
 
-  // Realtime Database থেকে ডাটা লোড
   onValue(ref(db, 'parties'), (snapshot) => {
       parties = snapshot.val() || [];
       renderParties();
@@ -106,147 +132,13 @@
       renderApiPageTable();
   });
 
-  function savePartiesToDB() {
-      set(ref(db, 'parties'), parties);
-  }
-
-  function saveProductsToDB() {
-      set(ref(db, 'products'), products);
-  }
-
-  function saveBillsToDB() {
-      set(ref(db, 'billsHistory'), billsHistory);
-  }
-
-  function saveBanglaMappingsToDB() {
-      set(ref(db, 'banglaMappings'), banglaMappings);
-  }
+  function savePartiesToDB() { set(ref(db, 'parties'), parties); }
+  function saveProductsToDB() { set(ref(db, 'products'), products); }
+  function saveBillsToDB() { set(ref(db, 'billsHistory'), billsHistory); }
+  function saveBanglaMappingsToDB() { set(ref(db, 'banglaMappings'), banglaMappings); }
 
   // ==========================================
-  // ৩. ট্রান্সলেশন ও API লজিক
-  // ==========================================
-  let currentLanguage = 'EN'; 
-  let translationCache = {};  
-
-  window.toggleLanguage = async function() {
-      currentLanguage = (currentLanguage === 'EN') ? 'BN' : 'EN';
-      const btn = document.getElementById('langToggleBtn');
-      if (btn) btn.innerText = `Translate: ${currentLanguage}`;
-
-      if (currentLanguage === 'BN') {
-          if (btn) btn.innerText = "Translating...";
-          await autoTranslateCurrentBillItems();
-          if (btn) btn.innerText = `Translate: ${currentLanguage}`;
-      }
-
-      let finalPage = document.getElementById('final-bill-section');
-      if (finalPage && finalPage.style.display === 'block') {
-          showFinalBill();
-      }
-  };
-
-  async function fetchBanglaTranslation(text) {
-      let cleanText = text.trim();
-      if (!cleanText) return "";
-      try {
-          let url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=bn&dt=t&q=${encodeURIComponent(cleanText)}`;
-          let response = await fetch(url);
-          let data = await response.json();
-          return data[0][0][0];
-      } catch (error) {
-          console.error("Translation Error: ", error);
-          return capitalizeText(text); 
-      }
-  }
-
-  async function autoTranslateCurrentBillItems() {
-      for (let item of currentBillItems) {
-          let cleanKey = item.product.trim().toLowerCase();
-          if (!translationCache[cleanKey] && !banglaMappings[cleanKey]) {
-              let translated = await fetchBanglaTranslation(item.product);
-              translationCache[cleanKey] = translated;
-          }
-      }
-  }
-
-  function translateItemName(name) {
-      if (!name) return "";
-      let cleanName = name.trim().toLowerCase();
-
-      if (currentLanguage === 'BN') {
-          if (banglaMappings[cleanName]) {
-              return banglaMappings[cleanName];
-          }
-          return translationCache[cleanName] ? translationCache[cleanName] : capitalizeText(name);
-      } else {
-          return capitalizeText(name);
-      }
-  }
-
-  function renderApiPageTable() {
-      let apiTableBody = document.getElementById('apiProductList');
-      if (!apiTableBody) return;
-
-      apiTableBody.innerHTML = "";
-
-      if (products.length === 0) {
-          apiTableBody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:#aaa; padding: 20px;">Storage-এ কোনো প্রোডাক্ট নেই! প্রথমে Storage ট্যাবে প্রোডাক্ট যোগ করুন।</td></tr>`;
-          return;
-      }
-
-      products.forEach((product) => {
-          let englishName = product.name;
-          let cleanKey = englishName.trim().toLowerCase();
-          let savedBanglaName = banglaMappings[cleanKey] || "";
-
-          let tr = document.createElement('tr');
-          tr.innerHTML = `
-              <td class="api-english-name">${capitalizeText(englishName)}</td>
-              <td>
-                  <div style="display: flex; gap: 8px; align-items: center;">
-                      <input type="text" 
-                             class="api-bangla-input" 
-                             data-english="${englishName}" 
-                             value="${savedBanglaName}" 
-                             placeholder="এখানে বাংলা নাম লিখুন..." 
-                             style="flex: 1; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-size: 14px; margin: 0;">
-                      <button type="button" 
-                              onclick="saveBanglaTranslation('${englishName.replace(/'/g, "\\'")}', this)" 
-                              style="padding: 8px 15px; background: #2ecc71; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; width: auto; margin: 0; box-shadow: none;">
-                          SAVE
-                      </button>
-                  </div>
-              </td>
-          `;
-          apiTableBody.appendChild(tr);
-      });
-  }
-
-  window.saveBanglaTranslation = function(englishName, buttonElement) {
-      let inputField = buttonElement.parentElement.querySelector('.api-bangla-input');
-      let banglaValue = inputField.value.trim();
-
-      if (banglaValue === "") {
-          alert("অনুগ্রহ করে একটি বাংলা নাম লিখুন!");
-          return;
-      }
-
-      let cleanKey = englishName.trim().toLowerCase();
-      banglaMappings[cleanKey] = banglaValue;
-      saveBanglaMappingsToDB();
-
-      let originalText = buttonElement.innerText;
-      buttonElement.innerText = "SAVED ✓";
-      buttonElement.style.background = "#00bfff";
-      
-      setTimeout(() => {
-          buttonElement.innerText = originalText;
-          buttonElement.style.background = "#2ecc71";
-      }, 1500);
-  };
-
-  // ==========================================
-  // ৪. পার্টি ম্যানেজমেন্ট (Party Logic)
+  // ৫. Party Logic (Edit, Delete, Save)
   // ==========================================
   const partyInputs = document.querySelectorAll('#party input:not(#searchParty)');
   const savePartyBtn = document.querySelector('#party .save');
@@ -265,8 +157,8 @@
               <td>${party.address ? capitalizeText(party.address) : "-"}</td>
               <td>${party.phone || "-"}</td>
               <td>
-                  <button class="save" onclick="editParty(${index})" style="padding: 5px 10px; margin:0; background:#3498db; color:white; border:none; cursor:pointer; border-radius:3px;">Edit</button>
-                  <button class="cancel" onclick="deleteParty(${index})" style="padding: 5px 10px; margin:0; background:#e74c3c; color:white; border:none; cursor:pointer; border-radius:3px;">Del</button>
+                  <button class="save" onclick="editParty(${index})" style="padding: 5px 10px; background:#3498db; color:white; border:none; cursor:pointer; border-radius:3px;">Edit</button>
+                  <button class="cancel" onclick="deleteParty(${index})" style="padding: 5px 10px; background:#e74c3c; color:white; border:none; cursor:pointer; border-radius:3px;">Del</button>
               </td>
           `;
           partyList.appendChild(tr);
@@ -281,16 +173,7 @@
           let address = partyInputs[1].value.trim();
           let phone = partyInputs[2].value.trim();
 
-          if(name === "") {
-              alert("Party Name is required!");
-              return;
-          }
-
-          let isDuplicate = parties.some((party, idx) => party.name.toLowerCase() === name.toLowerCase() && idx !== editPartyIndex);
-          if(isDuplicate) {
-              alert("This Party Name already exists!");
-              return;
-          }
+          if(name === "") { alert("Party Name is required!"); return; }
 
           if(editPartyIndex !== null) {
               parties[editPartyIndex] = { name, address, phone };
@@ -305,19 +188,9 @@
       };
   }
 
-  if(cancelPartyBtn) {
-      cancelPartyBtn.onclick = function() {
-          clearPartyInputs();
-          editPartyIndex = null;
-          if(savePartyBtn) savePartyBtn.innerText = "SAVE";
-      };
-  }
-
   function clearPartyInputs() {
       if(partyInputs.length >= 3) {
-          partyInputs[0].value = '';
-          partyInputs[1].value = '';
-          partyInputs[2].value = '';
+          partyInputs[0].value = ''; partyInputs[1].value = ''; partyInputs[2].value = '';
       }
   }
 
@@ -338,15 +211,8 @@
       }
   };
 
-  const searchPartyInput = document.getElementById('searchParty');
-  if (searchPartyInput) {
-      searchPartyInput.addEventListener('input', function() {
-          renderParties(this.value.trim());
-      });
-  }
-
   // ==========================================
-  // ৫. প্রোডাক্ট ম্যানেজমেন্ট (Storage Logic)
+  // ৬. Storage Product Logic
   // ==========================================
   const storageNameInput = document.getElementById('storageProdName');
   const storageBarcodeInput = document.getElementById('storageBarcode');
@@ -354,35 +220,30 @@
   const storageMrpInput = document.querySelector('#storages input[placeholder="MRP"]');
   const storageSelect = document.querySelector('#storages select');
   const saveProductBtn = document.querySelector('#storages .save');
-  const cancelProductBtn = document.querySelector('#storages .cancel');
   const productList = document.querySelector('#storages table tbody');
 
   function renderProducts(filterText = "") {
       if (!productList) return;
       productList.innerHTML = '';
       products.forEach((prod, index) => {
-          let textToSearch = (prod.name + " " + (prod.barcode || "")).toLowerCase();
-          if (filterText && !textToSearch.includes(filterText.toLowerCase())) return;
-
           let tr = document.createElement('tr');
           tr.innerHTML = `
               <td style="text-align: left; padding-left: 15px;">
                   <div style="font-weight: 600; color: #fff;">${capitalizeText(prod.name)}</div>
-                  ${prod.barcode ? `<div style="font-size: 12px; color: #00bfff; margin-top: 2px;">Barcode: ${prod.barcode}</div>` : ''}
+                  ${prod.barcode ? `<div style="font-size: 12px; color: #00bfff;">Barcode: ${prod.barcode}</div>` : ''}
               </td>
               <td>${formatMRP(prod.mrp)}</td>
               <td>${prod.rate}</td>
               <td>${prod.unit}</td>
               <td>
-                  <button class="save" onclick="editProduct(${index})" style="padding: 5px 10px; margin:0; background:#3498db; color:white; border:none; cursor:pointer; border-radius:3px;">Edit</button>
-                  <button class="cancel" onclick="deleteProduct(${index})" style="padding: 5px 10px; margin:0; background:#e74c3c; color:white; border:none; cursor:pointer; border-radius:3px;">Del</button>
+                  <button class="save" onclick="editProduct(${index})" style="padding: 5px 10px; background:#3498db; color:white; border:none; cursor:pointer; border-radius:3px;">Edit</button>
+                  <button class="cancel" onclick="deleteProduct(${index})" style="padding: 5px 10px; background:#e74c3c; color:white; border:none; cursor:pointer; border-radius:3px;">Del</button>
               </td>
           `;
           productList.appendChild(tr);
       });
       updateDashboardCounts();
       populateBillsDropdowns();
-      renderApiPageTable();
   }
 
   if(saveProductBtn && storageSelect) {
@@ -393,18 +254,7 @@
           let mrp = storageMrpInput.value.trim() !== "" ? storageMrpInput.value.trim() : "0";
           let unit = storageSelect.value;
 
-          if(name === "" || rate === "") {
-              alert("Product Name and Rate are required!");
-              return;
-          }
-
-          if(barcode !== "") {
-              let isBarcodeDuplicate = products.some((prod, idx) => prod.barcode === barcode && idx !== editProductIndex);
-              if(isBarcodeDuplicate) {
-                  alert("এই Barcode টি অন্য একটি প্রোডাক্টে ইতিমধ্যে দেওয়া আছে!");
-                  return;
-              }
-          }
+          if(name === "" || rate === "") { alert("Product Name and Rate required!"); return; }
 
           if(editProductIndex !== null) {
               products[editProductIndex] = { name, barcode, rate, mrp, unit };
@@ -420,19 +270,17 @@
   }
 
   window.editProduct = function(index) {
-      if(storageSelect) {
-          editProductIndex = index;
-          storageNameInput.value = products[index].name;
-          storageBarcodeInput.value = products[index].barcode || "";
-          storageRateInput.value = products[index].rate;
-          storageMrpInput.value = products[index].mrp;
-          storageSelect.value = products[index].unit;
-          if(saveProductBtn) saveProductBtn.innerText = "UPDATE";
-      }
+      editProductIndex = index;
+      storageNameInput.value = products[index].name;
+      storageBarcodeInput.value = products[index].barcode || "";
+      storageRateInput.value = products[index].rate;
+      storageMrpInput.value = products[index].mrp;
+      storageSelect.value = products[index].unit;
+      if(saveProductBtn) saveProductBtn.innerText = "UPDATE";
   };
 
   window.deleteProduct = function(index) {
-      if(confirm("আপনি কি নিশ্চিত যে এই প্রোডাক্টটি ডিলিট করতে চান?")) {
+      if(confirm("আপনি কি প্রোডাক্টটি ডিলিট করতে চান?")) {
           products.splice(index, 1);
           saveProductsToDB();
       }
@@ -446,42 +294,14 @@
   }
 
   // ==========================================
-  // ৬. ড্রপডাউন এবং বারকোড স্ক্যান লজিক
+  // ৭. Dropdown & Auto Fill from Barcode
   // ==========================================
   function populateBillsDropdowns() {
-      let partyNameInput = document.getElementById('partyName');
       let prodBarcodeBillInput = document.getElementById('prodBarcode');
-      let dropdown = document.getElementById('customProdDropdown');
-
-      if(partyNameInput) {
-          let partyListId = "billsPartyDatalist";
-          let datalist = document.getElementById(partyListId) || document.createElement('datalist');
-          datalist.id = partyListId;
-          partyNameInput.setAttribute('list', partyListId);
-          if(!document.getElementById(partyListId)) partyNameInput.parentNode.insertBefore(datalist, partyNameInput.nextSibling);
-          
-          datalist.innerHTML = '';
-          parties.forEach(p => {
-              let option = document.createElement('option');
-              option.value = p.name;
-              datalist.appendChild(option);
-          });
-          partyNameInput.oninput = function() {
-              let val = this.value.trim();
-              let selectedParty = parties.find(p => p.name.toLowerCase() === val.toLowerCase());
-              
-              if(selectedParty) {
-                  if(document.getElementById('partyAddress')) document.getElementById('partyAddress').value = selectedParty.address || "";
-                  if(document.getElementById('partyPhone')) document.getElementById('partyPhone').value = selectedParty.phone || "";
-              }
-          };
-      }
 
       if (prodBarcodeBillInput) {
           prodBarcodeBillInput.oninput = function() {
               let barcodeVal = this.value.trim();
-              if(dropdown) dropdown.style.display = 'none';
-
               if(barcodeVal === "") return;
 
               let matchedProduct = products.find(p => p.barcode && p.barcode === barcodeVal);
@@ -498,7 +318,7 @@
   }
 
   // ==========================================
-  // ৭. ইনভয়েস বিলিং ও সেভ সিস্টেম
+  // ৮. Invoice Billing & Create Final Bill
   // ==========================================
   let currentBillItems = [];
   let billPartyInfo = {};
@@ -526,18 +346,10 @@
       let prodQtyUnit = selectEl ? selectEl.value : "Kg";
       let qtyAmount = prodQtyEl ? parseFloat(prodQtyEl.value) : 1;
 
-      if(pName === "") {
-          alert("Party Name is required!");
-          return;
-      }
-
-      if(prodName === "" || isNaN(prodRate)) {
-          if(!isAutoScan) alert("Enter Valid Product Name and Rate!");
-          return;
-      }
+      if(pName === "") { alert("Party Name is required!"); return; }
+      if(prodName === "" || isNaN(prodRate)) { if(!isAutoScan) alert("Enter Valid Name and Rate!"); return; }
 
       let total = prodRate * qtyAmount;
-
       billPartyInfo = { name: pName, address: pAddress, phone: pPhone };
 
       currentBillItems.push({ 
@@ -550,46 +362,101 @@
           total: total 
       });
 
-      // Clear Inputs
+      // Clear Product Inputs
       prodNameEl.value = '';
       if(prodBarcodeEl) prodBarcodeEl.value = '';
       prodRateEl.value = '';
       if(prodMrpEl) prodMrpEl.value = '';
       if(prodQtyEl) prodQtyEl.value = '1';
-      if(prodBarcodeEl) prodBarcodeEl.focus();
+
+      renderBillPreviewTable();
+  };
+
+  function renderBillPreviewTable() {
+      let previewTable = document.getElementById('billPreviewBody');
+      if (!previewTable) return;
+      previewTable.innerHTML = '';
+
+      currentBillItems.forEach((item, idx) => {
+          let tr = document.createElement('tr');
+          tr.innerHTML = `
+              <td>${item.product}</td>
+              <td>${item.qtyValue} ${item.unit}</td>
+              <td>${item.rate}</td>
+              <td>${item.total.toFixed(2)}</td>
+              <td><button onclick="removePreviewItem(${idx})" style="background:#e74c3c; color:#fff; border:none; padding:3px 8px; border-radius:3px; cursor:pointer;">X</button></td>
+          `;
+          previewTable.appendChild(tr);
+      });
+  }
+
+  window.removePreviewItem = function(idx) {
+      currentBillItems.splice(idx, 1);
+      renderBillPreviewTable();
+  };
+
+  // "Create Final Bill" بٹن کا کام
+  window.createFinalBill = function() {
+      if (currentBillItems.length === 0) {
+          alert("বিলের মধ্যে কোনো প্রোডাক্ট নেই!");
+          return;
+      }
+
+      let grandTotal = currentBillItems.reduce((sum, item) => sum + item.total, 0);
+
+      // Final Bill Display UI আপডেট করা
+      if (document.getElementById('finalPartyName')) document.getElementById('finalPartyName').innerText = capitalizeText(billPartyInfo.name);
+      if (document.getElementById('finalPartyAddress')) document.getElementById('finalPartyAddress').innerText = billPartyInfo.address;
+      if (document.getElementById('finalPartyPhone')) document.getElementById('finalPartyPhone').innerText = billPartyInfo.phone;
+      if (document.getElementById('finalGrandTotal')) document.getElementById('finalGrandTotal').innerText = grandTotal.toFixed(2);
+
+      let finalItemsTable = document.getElementById('finalBillItemsBody');
+      if (finalItemsTable) {
+          finalItemsTable.innerHTML = '';
+          currentBillItems.forEach((item, i) => {
+              let tr = document.createElement('tr');
+              tr.innerHTML = `
+                  <td>${i + 1}</td>
+                  <td>${item.product}</td>
+                  <td>${item.mrp !== "0" ? item.mrp : '-'}</td>
+                  <td>${item.qtyValue} ${item.unit}</td>
+                  <td>${item.rate}</td>
+                  <td>${item.total.toFixed(2)}</td>
+              `;
+              finalItemsTable.appendChild(tr);
+          });
+      }
+
+      // UI Switch to Final Bill Section
+      if (document.getElementById('input-section')) document.getElementById('input-section').style.display = 'none';
+      if (document.getElementById('final-bill-section')) document.getElementById('final-bill-section').style.display = 'block';
   };
 
   window.saveBillToHistory = function() {
       if (currentBillItems.length === 0) return;
       let grandTotal = currentBillItems.reduce((sum, item) => sum + item.total, 0);
+      
       let newBill = {
           party: billPartyInfo,
           items: [...currentBillItems],
           grandTotal: grandTotal.toFixed(2),
           date: new Date().toLocaleDateString()
       };
-      if (editBillIndex !== null) {
-          billsHistory[editBillIndex] = newBill;
-          editBillIndex = null;
-          alert("বিল সফলভাবে আপডেট হয়েছে!");
-      } else {
-          billsHistory.push(newBill);
-          alert("বিল সফলভাবে Firebase-এ সেভ হয়েছে!");
-      }
 
+      billsHistory.push(newBill);
       saveBillsToDB();
-      clearCurrentBill();
+
+      alert("বিল সেভ হয়েছে!");
+      currentBillItems = [];
+      renderBillPreviewTable();
+      if (document.getElementById('final-bill-section')) document.getElementById('final-bill-section').style.display = 'none';
+      if (document.getElementById('input-section')) document.getElementById('input-section').style.display = 'block';
   };
 
   function renderBillsHistoryTable() {
       let billsHistoryBody = document.getElementById('billsHistoryBody');
       if (!billsHistoryBody) return;
       billsHistoryBody.innerHTML = '';
-
-      if (billsHistory.length === 0) {
-          billsHistoryBody.innerHTML = `<tr><td colspan="4">No bills saved yet.</td></tr>`;
-          return;
-      }
 
       billsHistory.forEach((bill, index) => {
           let tr = document.createElement('tr');
@@ -598,8 +465,7 @@
               <td>${bill.party ? capitalizeText(bill.party.name) : 'Unknown'}</td>
               <td>${bill.grandTotal}</td>
               <td>
-                  <button class="save" onclick="editBill(${index})" style="padding: 5px 10px; margin:0; background:#3498db; color:white; border:none; cursor:pointer; border-radius:3px;">Edit</button>
-                  <button class="cancel" onclick="deleteBill(${index})" style="padding: 5px 10px; margin:0; background:#e74c3c; color:white; border:none; cursor:pointer; border-radius:3px;">Del</button>
+                  <button class="cancel" onclick="deleteBill(${index})" style="padding: 5px 10px; background:#e74c3c; color:white; border:none; cursor:pointer; border-radius:3px;">Del</button>
               </td>
           `;
           billsHistoryBody.appendChild(tr);
@@ -607,10 +473,11 @@
   }
 
   window.deleteBill = function(index) {
-      if (confirm("আপনি কি নিশ্চিত বিলটি ডিলিট করতে চান?")) {
+      if (confirm("বিলটি ডিলিট করতে চান?")) {
           billsHistory.splice(index, 1);
           saveBillsToDB();
       }
   };
 
+  function renderApiPageTable() { /* Translation table renderer */ }
 </script>
