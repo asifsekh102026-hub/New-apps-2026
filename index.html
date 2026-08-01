@@ -4,8 +4,14 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
   <link rel="stylesheet" href="style.css">
   <title>SEKH BHANDAR</title>
   <style>
@@ -85,7 +91,6 @@
        
   <div class="main-content">
       
-    <!-- DASHBOARD SECTION -->
     <div id="dashboard" class="content">
       <div class="card">
         <h3>Total Party</h3>
@@ -103,10 +108,10 @@
       <div class="session-box">
         <span>📱 Mobile Connect Session ID: </span>
         <strong id="displaySessionId">Loading...</strong>
+        <strong id="session-id" style="display:none;">Loading...</strong>
       </div>
     </div>
     
-    <!-- PARTY SECTION -->
     <div id="party" class="content">
       <h1 class="logo">SEKH BHANDAR</h1>
       <h5>Party Information</h5>
@@ -139,7 +144,6 @@
       </table>
     </div>
                     
-    <!-- STORAGES SECTION -->
     <div id="storages" class="content">
       <h1 class="logo">SEKH BHANDAR</h1>
       <h5>Storage Information</h5> 
@@ -197,7 +201,6 @@
       </table>
     </div>
 
-    <!-- INVOICE BILLS SECTION -->
     <div id="bills" class="content">
       <h1 class="logo">SEKH BHANDAR</h1>
       
@@ -205,7 +208,6 @@
         <button type="button" id="langToggleBtn" class="translate-btn" onclick="toggleLanguage()">Translate: EN</button>
       </div>
 
-      <!-- Input Form Section -->
       <div id="input-section">
         <h3>Party Information</h3>
         <input type="text" id="partyName" class="capitalize" placeholder="Party Name">
@@ -261,7 +263,6 @@
         <button type="button" class="cancel" onclick="clearCurrentBill()">Cancel Bill</button>
       </div>
 
-      <!-- Preview Section -->
       <div id="preview-section" style="display:none;">
         <h3>Bill Preview</h3>
         <table>
@@ -285,14 +286,12 @@
         </div>
       </div>
 
-      <!-- Final Bill Section -->
       <div id="final-bill-section" style="display:none;">
         <h3 class="no-print">Final Bill</h3>
         <div id="finalBillContentContainer"></div>
         <br>
       </div>
 
-      <!-- History Table Section -->
       <div id="historyTableContainer" style="margin-top: 30px;" class="no-print">
         <hr>
         <h3>Bills History</h3>
@@ -310,10 +309,9 @@
       </div>
     </div>
 
-    <!-- API MAPPING SECTION -->
     <div id="api" class="content">
       <h1 class="logo">SEKH BHANDAR</h1>
-      <h5>Product Language Mapping (API)</h5>
+      ##### Product Language Mapping (API)
       <input type="text" id="apiBanglaSearch" placeholder="Search Bangla Name Only...">
 
       <button type="button" onclick="autoTranslateAllStorageProducts(this)" style="background: #00bfff; margin-top: 10px;">Auto Translate All Products</button>
@@ -332,6 +330,6 @@
 
   </div>
 
-  <script type="module" src="script.js"></script>
+  <script src="script.js"></script>
 </body>
-</html>
+  </html>
