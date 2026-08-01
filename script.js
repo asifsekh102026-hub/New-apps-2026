@@ -1128,60 +1128,110 @@ renderBillsHistoryTable();
 updateDashboardCounts();
 
 // ==========================================
-// ★ Firebase Realtime Database Session
+// SEKH BHANDAR - CLEAN FIREBASE SYNC & QR CODE SCRIPT
 // ==========================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+// ১. আপনার সঠিক ফায়ারবেস কনফিগারেশন (`sqrk1aug`)
 const firebaseConfig = {
-    apiKey: "AIzaSyDummyKeyForScannerProj-ReplaceIfHaveOne",
-    authDomain: "scanner-a27dd.firebaseapp.com",
-    databaseURL: "https://scanner-a27dd-default-rtdb.firebaseio.com",
-    projectId: "scanner-a27dd",
-    storageBucket: "scanner-a27dd.appspot.com",
-    messagingSenderId: "123456789012",
-    appId: "1:123456789012:web:abcdef1234567890"
+  apiKey: "AIzaSyDDb579KQ0aF8MZubI42NhhKuexkfXVigk",
+  authDomain: "sqrk1aug.firebaseapp.com",
+  databaseURL: "https://sqrk1aug-default-rtdb.firebaseio.com",
+  projectId: "sqrk1aug",
+  storageBucket: "sqrk1aug.firebasestorage.app",
+  messagingSenderId: "34276026895",
+  appId: "1:34276026895:web:0b14b54e24ddfc103f117a",
+  measurementId: "G-VTWV1564WJ"
 };
 
-function initFirebaseSession() {
-    if (typeof firebase === 'undefined') {
-        console.warn("Firebase SDK Not Loaded!");
-        return;
-    }
+// ফায়ারবেস ইনিশিয়ালাইজেশন
+const pcApp = initializeApp(firebaseConfig, "PC_APP");
+const pcDatabase = getDatabase(pcApp);
 
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
+// সেশন কী
+const pcSessionKey = "SB-2026"; 
+const scannedRef = ref(pcDatabase, 'sessions/' + pcSessionKey + '/scannedData');
 
-    const database = firebase.database();
+let lastProcessedTimestamp = 0;
 
-    // Session ID সংরক্ষণ বা জেনারেট (যদি না থাকে)
-    let sessionId = localStorage.getItem('activeSessionId');
-    if (!sessionId) {
-        sessionId = "SCAN-" + Math.floor(1000 + Math.random() * 9000);
-        localStorage.setItem('activeSessionId', sessionId);
-    }
+// ==========================================
+// ২. FIREBASE REALTIME LISTENER (মোবাইল থেকে ডাটা রিসিভ)
+// ==========================================
+onValue(scannedRef, (snapshot) => {
+    const data = snapshot.val();
+    
+    if (data && data.code && data.timestamp !== lastProcessedTimestamp) {
+        lastProcessedTimestamp = data.timestamp;
+        const scannedBarcode = data.code;
+        
+        console.log("⚡ Barcode Received from Mobile Scanner:", scannedBarcode);
 
-    let displayEl = document.getElementById('displaySessionId');
-    if (displayEl) displayEl.innerText = sessionId;
+        // পিসির একটিভ ইনপুট বক্স খুঁজে সেখানে বারকোড বসানো
+        let targetInput = document.getElementById('prodBarcode') || 
+                          document.getElementById('storageBarcode') || 
+                          document.getElementById('apiBanglaSearch') ||
+                          document.querySelector('input:focus');
 
-    let sessionEl = document.getElementById('session-id');
-    if (sessionEl) sessionEl.innerText = sessionId;
+        if (targetInput) {
+            targetInput.value = scannedBarcode;
+            
+            // অটো ইনপুট এবং এন্টার ইভেন্ট ট্রিগার করা
+            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+            targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+            targetInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+            targetInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
 
-    // Firebase লিসেনার: মোবাইলের নতুন স্ক্যান করা বারকোড ধরা
-    const sessionRef = database.ref('sessions/' + sessionId);
-
-    sessionRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data && data.lastScannedBarcode) {
-            let barcodeInput = document.getElementById('prodBarcode');
-            if (barcodeInput) {
-                barcodeInput.value = data.lastScannedBarcode;
-                barcodeInput.dispatchEvent(new Event('input'));
-            }
+            targetInput.focus();
         }
-    });
+
+        // সফলভাবে স্ক্যান হওয়ার পর বিপ সাউন্ড প্লে করা
+        playBeepSound();
+    }
+});
+
+// বিপ সাউন্ড প্লেয়ার ফাংশন
+function playBeepSound() {
+    try {
+        let audio = new Audio('https://media.geeksforgeeks.org/wp-content/uploads/20190531135120/beep.mp3');
+        audio.play().catch(() => {});
+    } catch (err) {
+        console.error("Audio Playback Error:", err);
+    }
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initFirebaseSession);
-} else {
-    initFirebaseSession();
+// ==========================================
+// ৩. AUTOMATIC QR CODE GENERATOR FOR MOBILE CONNECT
+// ==========================================
+function generateMobileConnectQR() {
+    const qrContainer = document.getElementById("qrcode");
+    
+    if (qrContainer) {
+        let currentUrl = window.location.href;
+        let baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/'));
+        
+        // মোবাইলের জন্য সেশন আইডি সহ লিঙ্ক তৈরি (যাতে স্ক্যান করলে সরাসরি কানেক্ট হয়)
+        let mobileAppUrl = baseUrl + '/mobile.html?session=' + pcSessionKey;
+
+        qrContainer.innerHTML = ""; 
+
+        new QRCode(qrContainer, {
+            text: mobileAppUrl,
+            width: 150,
+            height: 150,
+            colorDark: "#021024",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+        
+        console.log("✅ Mobile Connect QR Created:", mobileAppUrl);
+    }
 }
+
+// পেজ লোড হলেই QR কোড জেনারেট করবে
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', generateMobileConnectQR);
+} else {
+    generateMobileConnectQR();
+}
+                         
