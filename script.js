@@ -71,7 +71,7 @@ function updateDashboardCounts() {
 let currentLanguage = 'EN'; 
 let translationCache = {};  
 
-async function toggleLanguage() {
+window.toggleLanguage = async function() {
     currentLanguage = (currentLanguage === 'EN') ? 'BN' : 'EN';
     
     const btn = document.getElementById('langToggleBtn');
@@ -87,7 +87,7 @@ async function toggleLanguage() {
     if (finalPage && finalPage.style.display === 'block') {
         showFinalBill();
     }
-}
+};
 
 async function fetchBanglaTranslation(text) {
     let cleanText = text.trim();
@@ -170,7 +170,7 @@ function renderApiPageTable() {
     });
 }
 
-async function autoTranslateAllStorageProducts(btnElement) {
+window.autoTranslateAllStorageProducts = async function(btnElement) {
     if (products.length === 0) {
         alert("Storage-এ কোনো প্রোডাক্ট নেই!");
         return;
@@ -200,9 +200,9 @@ async function autoTranslateAllStorageProducts(btnElement) {
         btnElement.style.background = "#00bfff";
         btnElement.disabled = false;
     }, 2000);
-}
+};
 
-function saveBanglaTranslation(englishName, buttonElement) {
+window.saveBanglaTranslation = function(englishName, buttonElement) {
     let inputField = buttonElement.parentElement.querySelector('.api-bangla-input');
     let banglaValue = inputField.value.trim();
 
@@ -223,7 +223,7 @@ function saveBanglaTranslation(englishName, buttonElement) {
         buttonElement.innerText = originalText;
         buttonElement.style.background = "#2ecc71";
     }, 1500);
-}
+};
 
 document.getElementById('apiBanglaSearch')?.addEventListener('input', function(e) {
     let filterValue = e.target.value.trim().toLowerCase();
@@ -319,7 +319,7 @@ function clearPartyInputs() {
     }
 }
 
-function editParty(index) {
+window.editParty = function(index) {
     if(partyInputs.length >= 3) {
         editPartyIndex = index;
         partyInputs[0].value = parties[index].name;
@@ -327,7 +327,15 @@ function editParty(index) {
         partyInputs[2].value = parties[index].phone;
         if(savePartyBtn) savePartyBtn.innerText = "UPDATE";
     }
-}
+};
+
+window.deleteParty = function(index) {
+    if(confirm("Are you sure you want to delete this party?")) {
+        parties.splice(index, 1);
+        localStorage.setItem('parties', JSON.stringify(parties));
+        renderParties();
+    }
+};
 
 const searchPartyInput = document.getElementById('searchParty');
 if (searchPartyInput) {
@@ -481,7 +489,7 @@ function clearStorageInputs() {
     if(storageMrpInput) storageMrpInput.value = '';
 }
 
-function editProduct(index) {
+window.editProduct = function(index) {
     if(storageSelect) {
         editProductIndex = index;
         storageNameInput.value = products[index].name;
@@ -491,23 +499,15 @@ function editProduct(index) {
         storageSelect.value = products[index].unit;
         if(saveProductBtn) saveProductBtn.innerText = "UPDATE";
     }
-}
+};
 
-function deleteProduct(index) {
+window.deleteProduct = function(index) {
     if(confirm("আপনি কি নিশ্চিত যে এই প্রোডাক্টটি ডিলিট করতে চান?")) {
         products.splice(index, 1);
         localStorage.setItem('products', JSON.stringify(products));
         renderProducts();
     }
-}
-
-function deleteParty(index) {
-    if(confirm("Are you sure you want to delete this party?")) {
-        parties.splice(index, 1);
-        localStorage.setItem('parties', JSON.stringify(parties));
-        renderParties();
-    }
-}
+};
 
 const searchStorageInput = document.getElementById('searchStorage');
 if (searchStorageInput) {
@@ -692,7 +692,7 @@ function getFormattedDate() {
     return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
 }
 
-function addToPreview(isAutoScan = false) {
+window.addToPreview = function(isAutoScan = false) {
     let partyNameEl = document.getElementById('partyName');
     let partyAddressEl = document.getElementById('partyAddress');
     let partyPhoneEl = document.getElementById('partyPhone');
@@ -789,11 +789,11 @@ function addToPreview(isAutoScan = false) {
     } else {
         if(prodBarcodeEl) prodBarcodeEl.focus();
     }
-}
+};
 
-function goToPreviewDirectly() {
+window.goToPreviewDirectly = function() {
     openPreviewPage();
-}
+};
 
 function openPreviewPage() {
     if(currentBillItems.length === 0) {
@@ -847,7 +847,7 @@ function renderPreviewTable() {
     });
 }
 
-function updateInlineBillItem(index, field, value) {
+window.updateInlineBillItem = function(index, field, value) {
     if (!currentBillItems[index]) return;
     if (field === 'mrp') {
         currentBillItems[index].mrp = value.trim() === "" || value.trim() === "0" ? "-" : value.trim();
@@ -861,20 +861,20 @@ function updateInlineBillItem(index, field, value) {
     currentBillItems[index].total = currentBillItems[index].rate * currentBillItems[index].qtyValue;
     let totalCell = document.getElementById(`total-${index}`);
     if (totalCell) totalCell.innerText = currentBillItems[index].total.toFixed(2);
-}
+};
 
-function deletePreviewItem(index) {
+window.deletePreviewItem = function(index) {
     currentBillItems.splice(index, 1);
     renderPreviewTable();
     if(currentBillItems.length === 0) clearCurrentBill();
-}
+};
 
-function goBackToInput() {
+window.goBackToInput = function() {
     if(document.getElementById('preview-section')) document.getElementById('preview-section').style.display = 'none';
     if(document.getElementById('input-section')) document.getElementById('input-section').style.display = 'block';
-}
+};
 
-function clearCurrentBill() {
+window.clearCurrentBill = function() {
     currentBillItems = [];
     billPartyInfo = {};
     editBillItemIndex = null;
@@ -902,9 +902,9 @@ function clearCurrentBill() {
     if(document.getElementById('final-bill-section')) document.getElementById('final-bill-section').style.display = 'none';
     if(document.getElementById('input-section')) document.getElementById('input-section').style.display = 'block';
     if(document.getElementById('historyTableContainer')) document.getElementById('historyTableContainer').style.display = 'block';
-}
+};
 
-function showFinalBill() {
+window.showFinalBill = function() {
     if(currentBillItems.length === 0) {
         alert("কোনো প্রোডাক্ট যুক্ত করা হয়নি!");
         return;
@@ -989,7 +989,6 @@ function showFinalBill() {
                     <td>${i + 1}</td>
                     <td style="text-align: left; padding-left: 10px;">
                         ${translateItemName(item.product)}
-                        ${item.barcode ? `<span style="font-size:11px; font-weight:normal; display:block; color:#555;">[Code: ${item.barcode}]</span>` : ''}
                     </td>
                     <td>${formatMRP(item.mrp)}</td>
                     <td>${item.qtyValue} ${item.unit}</td>
@@ -1028,19 +1027,19 @@ function showFinalBill() {
     
     if(document.getElementById('preview-section')) document.getElementById('preview-section').style.display = 'none';
     finalBillSection.style.display = 'block';
-}
+};
 
-function goBackToPreviewFromFinal() {
+window.goBackToPreviewFromFinal = function() {
     if(document.getElementById('final-bill-section')) document.getElementById('final-bill-section').style.display = 'none';
     let previewPage = document.getElementById('preview-section');
     if(previewPage) previewPage.style.display = 'block';
     renderPreviewTable();
-}
+};
 
 // ==========================================
 // ৭. বিল হিস্টোরি সংরক্ষণ (History Logic)
 // ==========================================
-function saveBillToHistory() {
+window.saveBillToHistory = function() {
     if (currentBillItems.length === 0) return;
     let grandTotal = currentBillItems.reduce((sum, item) => sum + item.total, 0);
     let newBill = {
@@ -1062,7 +1061,7 @@ function saveBillToHistory() {
     updateDashboardCounts();
     renderBillsHistoryTable();
     clearCurrentBill();
-}
+};
 
 function renderBillsHistoryTable() {
     let billsHistoryBody = document.getElementById('billsHistoryBody');
@@ -1089,7 +1088,7 @@ function renderBillsHistoryTable() {
     });
 }
 
-function editBill(index) {
+window.editBill = function(index) {
     editBillIndex = index;
     let bill = billsHistory[index];
     if (!bill) return;
@@ -1110,128 +1109,19 @@ function editBill(index) {
     if (document.getElementById('final-bill-section')) document.getElementById('final-bill-section').style.display = 'none';
     if (document.getElementById('historyTableContainer')) document.getElementById('historyTableContainer').style.display = 'none';
     alert("বিলের ডাটা এডিটের জন্য লোড করা হয়েছে!");
-}
+};
 
-function deleteBill(index) {
+window.deleteBill = function(index) {
     if (confirm("আপনি কি নিশ্চিত বিলটি ডিলিট করতে চান?")) {
         billsHistory.splice(index, 1);
         localStorage.setItem('billsHistory', JSON.stringify(billsHistory));
         updateDashboardCounts();
         renderBillsHistoryTable();
     }
-}
+};
 
 // ইনিশিয়াল এক্সিকিউশন
 renderParties();
 renderProducts();
 renderBillsHistoryTable();
 updateDashboardCounts();
-
-// ==========================================
-// SEKH BHANDAR - CLEAN FIREBASE SYNC & QR CODE SCRIPT
-// ==========================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-// ১. আপনার সঠিক ফায়ারবেস কনফিগারেশন (`sqrk1aug`)
-const firebaseConfig = {
-  apiKey: "AIzaSyDDb579KQ0aF8MZubI42NhhKuexkfXVigk",
-  authDomain: "sqrk1aug.firebaseapp.com",
-  databaseURL: "https://sqrk1aug-default-rtdb.firebaseio.com",
-  projectId: "sqrk1aug",
-  storageBucket: "sqrk1aug.firebasestorage.app",
-  messagingSenderId: "34276026895",
-  appId: "1:34276026895:web:0b14b54e24ddfc103f117a",
-  measurementId: "G-VTWV1564WJ"
-};
-
-// ফায়ারবেস ইনিশিয়ালাইজেশন
-const pcApp = initializeApp(firebaseConfig, "PC_APP");
-const pcDatabase = getDatabase(pcApp);
-
-// সেশন কী
-const pcSessionKey = "SB-2026"; 
-const scannedRef = ref(pcDatabase, 'sessions/' + pcSessionKey + '/scannedData');
-
-let lastProcessedTimestamp = 0;
-
-// ==========================================
-// ২. FIREBASE REALTIME LISTENER (মোবাইল থেকে ডাটা রিসিভ)
-// ==========================================
-onValue(scannedRef, (snapshot) => {
-    const data = snapshot.val();
-    
-    if (data && data.code && data.timestamp !== lastProcessedTimestamp) {
-        lastProcessedTimestamp = data.timestamp;
-        const scannedBarcode = data.code;
-        
-        console.log("⚡ Barcode Received from Mobile Scanner:", scannedBarcode);
-
-        // পিসির একটিভ ইনপুট বক্স খুঁজে সেখানে বারকোড বসানো
-        let targetInput = document.getElementById('prodBarcode') || 
-                          document.getElementById('storageBarcode') || 
-                          document.getElementById('apiBanglaSearch') ||
-                          document.querySelector('input:focus');
-
-        if (targetInput) {
-            targetInput.value = scannedBarcode;
-            
-            // অটো ইনপুট এবং এন্টার ইভেন্ট ট্রিগার করা
-            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
-            targetInput.dispatchEvent(new Event('change', { bubbles: true }));
-            targetInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
-            targetInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
-
-            targetInput.focus();
-        }
-
-        // সফলভাবে স্ক্যান হওয়ার পর বিপ সাউন্ড প্লে করা
-        playBeepSound();
-    }
-});
-
-// বিপ সাউন্ড প্লেয়ার ফাংশন
-function playBeepSound() {
-    try {
-        let audio = new Audio('https://media.geeksforgeeks.org/wp-content/uploads/20190531135120/beep.mp3');
-        audio.play().catch(() => {});
-    } catch (err) {
-        console.error("Audio Playback Error:", err);
-    }
-}
-
-// ==========================================
-// ৩. AUTOMATIC QR CODE GENERATOR FOR MOBILE CONNECT
-// ==========================================
-function generateMobileConnectQR() {
-    const qrContainer = document.getElementById("qrcode");
-    
-    if (qrContainer) {
-        let currentUrl = window.location.href;
-        let baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/'));
-        
-        // মোবাইলের জন্য সেশন আইডি সহ লিঙ্ক তৈরি (যাতে স্ক্যান করলে সরাসরি কানেক্ট হয়)
-        let mobileAppUrl = baseUrl + '/mobile.html?session=' + pcSessionKey;
-
-        qrContainer.innerHTML = ""; 
-
-        new QRCode(qrContainer, {
-            text: mobileAppUrl,
-            width: 150,
-            height: 150,
-            colorDark: "#021024",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
-        });
-        
-        console.log("✅ Mobile Connect QR Created:", mobileAppUrl);
-    }
-}
-
-// পেজ লোড হলেই QR কোড জেনারেট করবে
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', generateMobileConnectQR);
-} else {
-    generateMobileConnectQR();
-}
-                         
