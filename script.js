@@ -516,6 +516,8 @@ if (searchStorageInput) {
     });
 }
 
+
+
 // ==========================================
 // ৫. ড্রপডাউন এবং অটোমেটিক বারকোড স্ক্যান লজিক
 // ==========================================
@@ -681,7 +683,7 @@ function populateBillsDropdowns() {
 }
 
 // ==========================================
-// ৬. ইনভয়েস বিলিং সিস্টেম (Billing Logic)
+// ৬. ইনভয়েস বিলিং সিস্টেম (Billing Logic & Auto-Scan Preview)
 // ==========================================
 let currentBillItems = [];
 let billPartyInfo = {};
@@ -691,6 +693,53 @@ function getFormattedDate() {
     const d = new Date();
     return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
 }
+
+// বারকোড ইনপুটে ডেটা দিলে বা স্ক্যান করলে অটো-ফিল এবং সরাসরি প্রিভিউতে যাওয়ার লজিক
+document.addEventListener('DOMContentLoaded', () => {
+    let barcodeInput = document.getElementById('prodBarcode');
+    if (barcodeInput) {
+        barcodeInput.addEventListener('input', function() {
+            let enteredBarcode = this.value.trim();
+            if (enteredBarcode === "") return;
+
+            let matchedProduct = null;
+            if (typeof products !== 'undefined' && Array.isArray(products)) {
+                matchedProduct = products.find(p => p.barcode && p.barcode.toString().trim() === enteredBarcode);
+            } else if (typeof allProducts !== 'undefined' && Array.isArray(allProducts)) {
+                matchedProduct = allProducts.find(p => p.barcode && p.barcode.toString().trim() === enteredBarcode);
+            }
+
+            if (matchedProduct) {
+                let prodNameEl = document.getElementById('prodName');
+                let prodRateEl = document.getElementById('prodRate');
+                let prodMrpEl = document.getElementById('prodMrp');
+                let selectEl = document.querySelector('#bills select');
+                let prodQtyEl = document.getElementById('prodQty');
+
+                if (prodNameEl) prodNameEl.value = matchedProduct.name || '';
+                if (prodRateEl) prodRateEl.value = matchedProduct.rate || matchedProduct.salePrice || '';
+                if (prodMrpEl) prodMrpEl.value = matchedProduct.mrp || '';
+                if (selectEl && matchedProduct.unit) selectEl.value = matchedProduct.unit;
+                if (prodQtyEl && (!prodQtyEl.value || prodQtyEl.value == "")) prodQtyEl.value = '1';
+
+                // সামান্য বিরতি দিয়ে প্রিভিউ লিস্টে যোগ করে সরাসরি প্রিভিউ পেজে চলে যাওয়া
+                setTimeout(() => {
+                    let partyNameInput = document.getElementById('partyName');
+                    if (partyNameInput && partyNameInput.value.trim() !== "") {
+                        if (typeof window.addToPreview === 'function') {
+                            window.addToPreview(true); // অটো স্ক্যান মোডে প্রিভিউতে অ্যাড করা
+                        }
+                        if (typeof openPreviewPage === 'function') {
+                            openPreviewPage(); // সরাসরি প্রিভিউ পেজ ওপেন করা
+                        }
+                    } else {
+                        console.log("Party Name is required before preview.");
+                    }
+                }, 200);
+            }
+        });
+    }
+});
 
 window.addToPreview = function(isAutoScan = false) {
     let partyNameEl = document.getElementById('partyName');
@@ -746,16 +795,16 @@ window.addToPreview = function(isAutoScan = false) {
 
     let total = prodRate * qtyAmount;
 
-    if(!parties.some(p => p.name.toLowerCase() === pName.toLowerCase())) {
+    if(typeof parties !== 'undefined' && !parties.some(p => p.name.toLowerCase() === pName.toLowerCase())) {
         parties.push({ name: pName, address: pAddress, phone: pPhone });
         localStorage.setItem('parties', JSON.stringify(parties));
-        renderParties();
+        if(typeof renderParties === 'function') renderParties();
     }
     
-    if(!products.some(p => p.name.toLowerCase() === prodName.toLowerCase() && p.unit === prodQtyUnit && p.mrp === prodMrp)) {
+    if(typeof products !== 'undefined' && !products.some(p => p.name.toLowerCase() === prodName.toLowerCase() && p.unit === prodQtyUnit && p.mrp === prodMrp)) {
         products.push({ name: prodName, barcode: prodBarcode, rate: prodRate, mrp: prodMrp, unit: prodQtyUnit });
         localStorage.setItem('products', JSON.stringify(products));
-        renderProducts();
+        if(typeof renderProducts === 'function') renderProducts();
     }
 
     billPartyInfo = { name: pName, address: pAddress, phone: pPhone };
@@ -786,8 +835,6 @@ window.addToPreview = function(isAutoScan = false) {
 
     if(!isAutoScan) {
         alert(`"${prodName}" প্রিভিউ লিস্টে যোগ হয়েছে!`);
-    } else {
-        if(prodBarcodeEl) prodBarcodeEl.focus();
     }
 };
 
@@ -878,7 +925,7 @@ window.clearCurrentBill = function() {
     currentBillItems = [];
     billPartyInfo = {};
     editBillItemIndex = null;
-    editBillIndex = null;
+    if(typeof editBillIndex !== 'undefined') editBillIndex = null;
     const sidebar = document.querySelector('.side-bar');
     const mainContent = document.querySelector('.main-content');
     if(sidebar) sidebar.style.display = 'block'; 
@@ -906,7 +953,7 @@ window.clearCurrentBill = function() {
 
 window.showFinalBill = function() {
     if(currentBillItems.length === 0) {
-        alert("কোনো প্রোডাক্ট যুক্ত করা হয়নি!");
+        alert("কোনো প্রোডাক্ট যুক্ত করা হয়নি!");
         return;
     }
     let finalBillSection = document.getElementById('final-bill-section');
@@ -1125,3 +1172,91 @@ renderParties();
 renderProducts();
 renderBillsHistoryTable();
 updateDashboardCounts();
+
+
+// ফায়ারবেস লাইভ স্ক্যান লিসেনার (অটো-ফিল ও প্রিভিউ ফিক্সড)
+onValue(sessionRef, (snapshot) => {
+    const data = snapshot.val();
+    
+    if (data && data.isConnected === true && data.scannedBarcode) {
+        let currentTimestamp = data.timestamp || 0;
+        
+        if (currentTimestamp === lastTimestamp && lastTimestamp !== 0) {
+            return; 
+        }
+        lastTimestamp = currentTimestamp;
+
+        let scannedBarcode = data.scannedBarcode.toString().trim();
+        let barcodeInput = document.getElementById('prodBarcode');
+
+        if (barcodeInput) {
+            // ১. বারকোড ইনপুটে সঠিক জায়গায় বসানো
+            barcodeInput.value = scannedBarcode;
+            
+            // ২. লোকাল স্টোরেজ বা products অ্যারে থেকে বারকোড ম্যাচ করে প্রোডাক্ট খুঁজে বের করা
+            let matchedProduct = null;
+            
+            // প্রথমে 'products' অ্যারে চেক করা
+            if (typeof products !== 'undefined' && Array.isArray(products)) {
+                matchedProduct = products.find(p => p.barcode && p.barcode.toString().trim() === scannedBarcode);
+            }
+            
+            // যদি products এ না পাওয়া যায়, তবে 'allProducts' বা অন্য কোনো অ্যারে থাকলে সেখানে খোঁজা
+            if (!matchedProduct && typeof allProducts !== 'undefined' && Array.isArray(allProducts)) {
+                matchedProduct = allProducts.find(p => p.barcode && p.barcode.toString().trim() === scannedBarcode);
+            }
+
+            let prodNameEl = document.getElementById('prodName');
+            let prodRateEl = document.getElementById('prodRate');
+            let prodMrpEl = document.getElementById('prodMrp');
+            let selectEl = document.querySelector('#bills select');
+            let prodQtyEl = document.getElementById('prodQty');
+
+            if (matchedProduct) {
+                // স্টোরেজে প্রোডাক্ট থাকলে সেখান থেকে ডেটা অটো-ফিল করা
+                if (prodNameEl) prodNameEl.value = matchedProduct.name || '';
+                if (prodRateEl) prodRateEl.value = matchedProduct.rate || matchedProduct.salePrice || '';
+                if (prodMrpEl) prodMrpEl.value = matchedProduct.mrp || '-';
+                if (selectEl && matchedProduct.unit) selectEl.value = matchedProduct.unit;
+                if (prodQtyEl && (!prodQtyEl.value || prodQtyEl.value == "")) prodQtyEl.value = '1';
+                console.log("Product found and auto-filled:", matchedProduct.name);
+            } else {
+                // স্টোরেজে বারকোডটি না থাকলে অন্তত বারকোডের নাম বা টেম্পোরারি ভ্যালু সেট করা যাতে খালি না থাকে
+                if (prodNameEl) prodNameEl.value = "Barcode: " + scannedBarcode;
+                if (prodRateEl) prodRateEl.value = "0";
+                if (prodMrpEl) prodMrpEl.value = "-";
+                if (prodQtyEl) prodQtyEl.value = "1";
+                console.log("Product not in storage, default values set for barcode:", scannedBarcode);
+            }
+
+            // ৩. ফায়ারবেস থেকে স্ক্যান করা বারকোড মুছে ফেলা যাতে লুপ না হয়
+            const { update } = window.firebaseDB || {};
+            if (typeof update === 'function') {
+                update(sessionRef, {
+                    scannedBarcode: null,
+                    timestamp: null
+                });
+            } else {
+                // যদি গ্লোবাল অবজেক্ট না থাকে, সরাসরি ফায়ারবেস আপডেট ফাংশন ব্যবহার করুন
+                set(ref(db, sessionRef.path + '/scannedBarcode'), null);
+            }
+
+            // ৪. ডেটা অটো-ফিল হওয়ার সাথে সাথেই প্রিভিউ পেজে চলে যাওয়া
+            setTimeout(() => {
+                if (prodNameEl && prodNameEl.value.trim() !== "") {
+                    // প্রিভিউ লিস্টে অ্যাড করা
+                    if (typeof window.addToPreview === 'function') {
+                        window.addToPreview(true); 
+                    }
+                    
+                    // সরাসরি প্রিভিউ পেজে রিডাইরেক্ট করা
+                    if (typeof window.goToPreviewDirectly === 'function') {
+                        window.goToPreviewDirectly();
+                    } else if (typeof openPreviewPage === 'function') {
+                        openPreviewPage();
+                    }
+                }
+            }, 300); // ৩০০ মিলি সেকেন্ড বিরতি যাতে ডোম (DOM) আপডেট হওয়ার পর্যাপ্ত সময় পায়
+        }
+    }
+});
