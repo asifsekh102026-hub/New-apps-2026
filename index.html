@@ -89,10 +89,75 @@
       }
     }
   </style>
+
+  <!-- Firebase App (Modular SDK) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAelRGMGxObubaW4hClrrGKjOvf38eptIA",
+    authDomain: "sekh-bhandarqr.firebaseapp.com",
+    projectId: "sekh-bhandarqr",
+    storageBucket: "sekh-bhandarqr.firebasestorage.app",
+    messagingSenderId: "288921469455",
+    appId: "1:288921469455:web:e6af1c52ce4bb28548997a",
+    measurementId: "G-GG4YRLWG57"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  window.firebaseDB = { db, ref, set, onValue, push };
+
+  // Generate and render QR Code keeping Session ID uniform
+  document.addEventListener("DOMContentLoaded", () => {
+    const sessionId = "SB-2026";
+    const displayElement = document.getElementById("displaySessionId");
+    if (displayElement) {
+      displayElement.innerText = sessionId;
+    }
+
+    const qrcodeContainer = document.getElementById("qrcode");
+    if (qrcodeContainer) {
+      qrcodeContainer.innerHTML = "";
+      new QRCode(qrcodeContainer, {
+        text: sessionId,
+        width: 150,
+        height: 150,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    // Listen to shared data or barcode from Mobile
+    const sessionRef = ref(db, 'sessions/' + sessionId);
+    onValue(sessionRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        if (data.sharedText) {
+          const activeTextEl = document.getElementById('prodName');
+          if (activeTextEl) {
+            activeTextEl.value = data.sharedText;
+          }
+        }
+        if (data.scannedBarcode) {
+          const barcodeEl = document.getElementById('prodBarcode');
+          if (barcodeEl) {
+            barcodeEl.value = data.scannedBarcode;
+          }
+        }
+      }
+    });
+  });
+</script>
+  
 </head>
 <body>
   
-  <div class="side-bar"> 
+  <div class="side-bar">  
     <h1 class="logo1">SEKH BHANDAR</h1>
     <ul>
       <li><a href="#dashboard" class="nav-link">DASHBOARD</a></li>
@@ -161,7 +226,7 @@
         <tbody id="partyList"></tbody>
       </table>
     </div>
-                    
+                
     <div id="storages" class="content">
       <h1 class="logo">SEKH BHANDAR</h1>
       <h5>Storage Information</h5> 
